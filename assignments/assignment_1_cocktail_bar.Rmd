@@ -33,6 +33,8 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 
 ```{r}
 library(readr)
+library(rlang)
+library(dplyr)
 
 urlfile = "https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv"
 
@@ -44,28 +46,56 @@ cocktaildata <- read_tsv(url(urlfile))
 The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.
 
 ```{r}
+#This is for putting ingredients into different columns
 
-cocktaildata <- cocktaildata |> 
-  separate_wider_delim(ingredients, delim = "<br/>",
-                       names = c("ingredient1", "ingredient2", "ingredient3", "ingredient4", "ingredient5", "ingredient6"),
-                       too_few = "align_start",
-                       
+cocktaildata_try <- cocktaildata |> 
+  separate(ingredients,
+           into = c("ingredient1", "ingredient2", "ingredient3", "ingredient4", "ingredient5", "ingredient6"),
+           sep = c("<br/>|<br>|<b4/>")
   )
 
-cocktaildata <- cocktaildata %>%
-  mutate(ingredient1 = gsub("^\\d+\\s*\\d*/\\d*\\s*oz\\s*|\\b\\d+[/.]?\\d*\\s*oz\\b|\\b\\d+[/.]?\\d*\\s*abv\\b|\\(.*?\\)", "", ingredient1),
-         ingredient1 = trimws(ingredient1))
-
-library(rlang)
-library(dplyr)
-
 ```
+
+```{r}
+#This is for deleting the unnecessary clutter
+
+clean_function <- function(dataframe, column_name, pattern_to_replace, replacement_string) {
+  for (column_name in column_name) {
+  dataframe[[column_name]] <- gsub(pattern_to_replace, replacement_string, dataframe[[column_name]])
+  dataframe[[column_name]] <- trimws(dataframe[[column_name]])
+  }
+  return(dataframe)
+}
+
+pattern_to_replace <- "^\\d+\\s*\\d*/\\d*\\s*oz\\s*|\\b\\d+[/.]?\\d*\\s*oz\\b|\\b\\d+[/.]?\\d*\\s*abv\\b|\\(.*?\\)|\\d+ drops\\s+|\\d+ dash\\s+|\\d+ dashes\\s+|\\d+ drop\\s+|\\d+ bsp\\s+"
+replacement_string <- ""
+columns_to_update <- c("ingredient1", "ingredient2", "ingredient3", "ingredient4", "ingredient5", "ingredient6")
+cocktaildata_complete <- clean_function(cocktaildata_try, columns_to_update, pattern_to_replace, replacement_string)
+
+#How can I do this more elegantly, so I do not have to find each measurment and delete it sort of manually with a regex
+```
+
 
 ## 3. All ingredients in alphabetical order
 
 Before opening the bar, you need to find a reliable supplier that has all the ingredients. You need to send a list of all possible ingredients you will need. They don't need the quantities (i.e. how many of these are needed), just the names of the ingredients.
 
 ```{r}
+
+cocktaildata_complete |> 
+  count(ingredient1)
+
+n_distinct(cocktaildata_complete$ingredient2)
+
+cocktaildata_complete |> 
+  unique_ingredients2 <- unique(c(ingredient1, ingredient2, ingredient3, ingredient4, ingredient5, ingredient6))
+  
+  
+unique_ingredients <- unique(c(cocktaildata_complete$ingredient1, cocktaildata_complete$ingredient2, cocktaildata_complete$ingredient3, cocktaildata_complete$ingredient4, cocktaildata_complete$ingredient5, cocktaildata_complete$ingredient6))
+
+sorted_ingredients <- sort(unique_ingredients) 
+  print(sorted_ingredients)
+  
 
 ```
 
