@@ -87,16 +87,12 @@ cocktaildata_complete |>
 
 n_distinct(cocktaildata_complete$ingredient2)
 
-cocktaildata_complete |> 
-  unique_ingredients2 <- unique(c(ingredient1, ingredient2, ingredient3, ingredient4, ingredient5, ingredient6))
-  
-  
-unique_ingredients <- unique(c(cocktaildata_complete$ingredient1, cocktaildata_complete$ingredient2, cocktaildata_complete$ingredient3, cocktaildata_complete$ingredient4, cocktaildata_complete$ingredient5, cocktaildata_complete$ingredient6))
+only_ingredients <- c(cocktaildata_complete$ingredient1, cocktaildata_complete$ingredient2, cocktaildata_complete$ingredient3, cocktaildata_complete$ingredient4, cocktaildata_complete$ingredient5, cocktaildata_complete$ingredient6)
 
-sorted_ingredients <- sort(unique_ingredients) 
-  print(sorted_ingredients)
+only_ingredients |>
+  unique() |>
+  sort()
   
-
 ```
 
 ## 4. Number of unique ingredients
@@ -104,7 +100,9 @@ sorted_ingredients <- sort(unique_ingredients)
 How many different ingredients you will need?
 
 ```{r}
-
+only_ingredients |> 
+  unique() |> 
+  n_distinct()
 ```
 
 ## 5. What are the top 10 ingredients?
@@ -112,6 +110,21 @@ How many different ingredients you will need?
 What are the 10 most frequently used ingredients? If there are ties, you can list more than 10.
 
 ```{r}
+# I need to count the number of observations, then put it next to the ingredient, creating a 2 column table, with the highest ingredient on top
+
+#First column
+
+print(only_ingredients)
+
+#Second column
+
+ingredient_count <- table(only_ingredients)
+
+#Table with decreasing number of occurences
+
+sorted_ingredient <- sort(ingredient_count, decreasing = TRUE)
+
+print(sorted_ingredient)
 
 ```
 
@@ -121,6 +134,10 @@ Count the number of ingredients and filter all the cocktails that has that many.
 
 ```{r}
 
+most_ingredients_cocktail <- cocktaildata_complete[complete.cases(cocktaildata_complete$ingredient6), ]
+
+print(most_ingredients_cocktail)
+
 ```
 
 ## 7. How many ingredients appear in only one cocktail (rare ingredient)?
@@ -128,6 +145,12 @@ Count the number of ingredients and filter all the cocktails that has that many.
 Count all cocktails with only one ingredient, and
 
 ```{r}
+
+dataframe_ingredients <- data.frame(ingredient_count)
+print(dataframe_ingredients)
+
+dataframe_ingredients |> 
+  filter(Freq < 2)
 
 ```
 
