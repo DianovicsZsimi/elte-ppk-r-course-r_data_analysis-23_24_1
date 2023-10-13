@@ -149,8 +149,11 @@ Count all cocktails with only one ingredient, and
 dataframe_ingredients <- data.frame(ingredient_count)
 print(dataframe_ingredients)
 
-dataframe_ingredients |> 
-  filter(Freq < 2)
+rare_ingredients <- dataframe_ingredients |> 
+  filter(Freq < 2) |> 
+  select(only_ingredients)
+
+rare_ingredients
 
 ```
 
@@ -158,12 +161,40 @@ dataframe_ingredients |>
 
 ```{r}
 
+rare_ingredients_vector <- as.character(rare_ingredients$only_ingredients)
+
+rare_ingredients_vector
+
+rare_cocktail <- cocktaildata_complete |> 
+  filter(ingredient1 %in% rare_ingredients_vector |
+           ingredient2 %in% rare_ingredients_vector |
+           ingredient3 %in% rare_ingredients_vector |
+           ingredient4 %in% rare_ingredients_vector |
+           ingredient5 %in% rare_ingredients_vector |
+           ingredient6 %in% rare_ingredients_vector)
+
+rm(rare_cocktai3, rare_cocktail1, rare_cocktail3, rare_cocktail4, rare_cocktail5, rare_cocktail6, x3, x5, students, sql, birth, bruh, datadrame, a, flights, flights_dt, dataset, planes, mapping, label_info)
+
+
 ```
 
 ## 9. What are the cocktails without rare ingredients?
 
 ```{r}
-  
+common_ingredients <- dataframe_ingredients |> 
+  filter(Freq > 1) |> 
+  select(only_ingredients)
+
+common_ingredients_vector <- as.character(common_ingredients$only_ingredients)
+
+common_cocktail <- cocktaildata_complete |> 
+  filter(ingredient1 %in% common_ingredients_vector &
+           ingredient2 %in% common_ingredients_vector &
+           ingredient3 %in% common_ingredients_vector &
+           ingredient4 %in% common_ingredients_vector &
+           ingredient5 %in% common_ingredients_vector &
+           ingredient6 %in% common_ingredients_vector)
+
 ```
 
 ## 10. Create a cheat sheet for the bartender!
@@ -179,6 +210,41 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 ```
 
 ```{r}
+no_clutter <- cocktaildata_complete |> 
+  select(name, ingredient1:ingredient6)
+
+all_ingredients <- dataframe_ingredients |>
+  select(only_ingredients)
+
+all_ingredients_df <- data.frame(all_ingredients = paste0(all_ingredients$only_ingredients))
+
+all_ingredients_column <- as.character(all_ingredients_df$all_ingredients)
+
+df_all <- data.frame(matrix(ncol = length(all_ingredients_column), nrow = 55))
+
+colnames(df_all) <- all_ingredients_column
+
+cheat_sheet_wo_x <- cbind(no_clutter, df_all)
+
+specific_ingredients_columns <- colnames(cheat_sheet_wo_x)[8:ncol(cheat_sheet_wo_x)]
+
+cheat_sheet_done <- cheat_sheet_wo_x %>%
+  select(name, ingredient1:"Peychaud's bitters")
+
+for (row_index in 1:nrow(cheat_sheet_done)) {
+  # Iterate through each specific ingredient column
+  for (col_name in specific_ingredients_columns) {
+    # Check if the ingredient is present for the cocktail (in ingredients1-6)
+    if (col_name %in% cheat_sheet_done[row_index, 2:7]) {
+      # If present, mark 'x' for that ingredient in the respective column
+      cheat_sheet_done[row_index, col_name] <- "x"
+    } else {
+      cheat_sheet_done[row_index, col_name] <- ""  # Leave it empty if not present
+    }
+  }
+}
+
+print(cheat_sheet_done)
 
 ```
 
