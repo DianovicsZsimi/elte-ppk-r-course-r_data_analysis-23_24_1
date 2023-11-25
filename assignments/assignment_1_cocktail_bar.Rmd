@@ -72,7 +72,7 @@ replacement_string <- ""
 columns_to_update <- c("ingredient1", "ingredient2", "ingredient3", "ingredient4", "ingredient5", "ingredient6")
 cocktaildata_complete <- clean_function(cocktaildata_try, columns_to_update, pattern_to_replace, replacement_string)
 
-#How can I do this more elegantly, so I do not have to find each measurment and delete it sort of manually with a regex
+#How can I do this more elegantly, so that I do not have to find each measurement and delete it sort of manually with a regex
 ```
 
 
@@ -173,7 +173,6 @@ rare_cocktail <- cocktaildata_complete |>
            ingredient5 %in% rare_ingredients_vector |
            ingredient6 %in% rare_ingredients_vector)
 
-rm(rare_cocktai3, rare_cocktail1, rare_cocktail3, rare_cocktail4, rare_cocktail5, rare_cocktail6, x3, x5, students, sql, birth, bruh, datadrame, a, flights, flights_dt, dataset, planes, mapping, label_info)
 
 
 ```
@@ -232,14 +231,11 @@ cheat_sheet_done <- cheat_sheet_wo_x %>%
   select(name, ingredient1:"Peychaud's bitters")
 
 for (row_index in 1:nrow(cheat_sheet_done)) {
-  # Iterate through each specific ingredient column
   for (col_name in specific_ingredients_columns) {
-    # Check if the ingredient is present for the cocktail (in ingredients1-6)
     if (col_name %in% cheat_sheet_done[row_index, 2:7]) {
-      # If present, mark 'x' for that ingredient in the respective column
       cheat_sheet_done[row_index, col_name] <- "x"
     } else {
-      cheat_sheet_done[row_index, col_name] <- ""  # Leave it empty if not present
+      cheat_sheet_done[row_index, col_name] <- ""
     }
   }
 }

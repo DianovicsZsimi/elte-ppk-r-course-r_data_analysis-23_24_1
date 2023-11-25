@@ -20,6 +20,8 @@ You will have to create 3 plots based on the datasets and instructions detailed 
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(tidytuesdayR)
+library(scales)
+library(ggrepel)
 ```
 
 ## Task 1: Climbing expeditions
@@ -30,9 +32,36 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 -   The bars are ordered by the sum of all expeditions (use `fct_reorder()`).
 -   The bar colors use the viridis palette and light theme.
 
-```{r}
+```{r 1. import + tidy}
+tt_gh <- tt_load_gh("2020-09-22")
+
+expeditions <- tt_download_file(tt_gh, "expeditions.csv") |> 
+  select(season, peak_name)
+
+expeditions$peak_name <- expeditions$peak_name |> 
+  fct_lump_n(15)
+
+expeditions$peak_name <- droplevels.factor(expeditions$peak_name, exclude = "Other")
+  
+expeditions <- na.omit(expeditions)
+```
+
+```{r 1. plotting}
+
+expeditions |> 
+  ggplot(aes(y = fct_reorder(peak_name, peak_name, .fun = length), fill = season)) +
+  geom_bar() +
+  scale_y_discrete(na.translate = FALSE) +
+  scale_fill_viridis_d() +
+  labs(title = "The 15 most popular peaks stacked by season of expedition",
+       x = "Number of expeditons",
+       y = NULL,
+       ) +
+  theme_light() +
+  theme(legend.position = "bottom")
 
 ```
+
 
 ## Task 2: PhDs awarded
 
@@ -44,9 +73,32 @@ Notes:
 -   To make the x axis breaks pretty, use `scales::pretty_breaks()`, to make the y axis labels comma formatted, use `scales::comma_format()`.
 -   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
-```{r}
+```{r 2. import + tidy}
+tt_gh2 <- tt_load_gh("2019-02-19")
+
+phds <- tt_download_file(tt_gh2, "phd_by_field.csv")
+
+sum_phds <- phds |> 
+  group_by(broad_field, year) |> 
+  summarise(n_broad = sum(n_phds, na.rm = TRUE)) 
 
 ```
+
+```{r 1. plotting}
+sum_phds |> 
+  ggplot(aes(x = year, y = n_broad, group = broad_field, color = broad_field)) +
+  geom_line(size = 1.2) +
+  labs(title = "Number of awarded Ph.D.-s in the US by year",
+       x = NULL,
+       y = NULL,
+       ) +
+  theme_minimal() +
+  theme(legend.position = "right", aspect.ratio = 1.2) +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  scale_y_continuous(labels = comma_format()) +
+  scale_color_brewer(palette = "Dark2", name = "Broad field")
+```
+
 
 ## Task 3: Commute in the US
 
@@ -58,6 +110,41 @@ Notes:
 -   Both axis scales are log transformed and the labels comma formatted, using `scales::comma_format()`
 -   The point size is 2, . The theme is set to light.
 
-```{r}
+```{r 3. import + tidy}
+tt_gh3 <- tt_load_gh("2019-11-05")
 
+commute <- tt_download_file(tt_gh3, "commute.csv")
+
+commute_agg <- commute |>
+  group_by(state, mode, state_abb, state_region) |> 
+  summarise(n = sum(n))
+  
+commute_mode <- commute_agg |> 
+  pivot_wider(names_from = mode, values_from = n, names_prefix = "n_") |> 
+  mutate(n_Bike = coalesce(n_Bike, n_Walk),
+         n_Walk = coalesce(n_Walk, n_Bike))
 ```
+
+```{r 3. plotting}
+
+commute_mode |> 
+  ggplot(aes(x = n_Walk, y = n_Bike, color = state_region)) +
+  geom_point(data = commute_mode[complete.cases(commute_mode$state_abb),],
+             size = 2,
+             shape = 16) +
+  geom_text_repel(aes(label = state_abb),
+                  color = "black",
+                  size = 5,
+                  max.overlaps = 4) +
+  scale_x_log10(labels = comma_format(), limits = c(3000, 460000)) +
+  scale_y_log10(labels = comma_format()) +
+  labs(title = "Number of people walking vs. biking to work in each USA state",
+       x = "Number of ppl walking to work (log N)",
+       y = "Number of ppl biking to work (log N)",
+       color = "State region"
+       ) +
+  theme_light() +
+  theme(legend.position = "right", aspect.ratio = 1, text = element_text(size = 14))
+  
+```
+
