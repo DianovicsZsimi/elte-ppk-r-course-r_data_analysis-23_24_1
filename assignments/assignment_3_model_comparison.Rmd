@@ -56,10 +56,22 @@ In your discussion of the findings, briefly interpret the results of the above a
 
 ## Read the data
 
+```{r}
+library(readxl)
+library(tidyverse)
+library(lmtest)
+library(broom)
+library(car)
+library(MASS)
+```
+
+
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
 ```{r}
+data <- read_xlsx("data/assignment_3_dataset.xlsx")
 
+str(data)
 ```
 
 ## Data and model diagnostics 
@@ -69,6 +81,13 @@ Read the dataset used in this assignment. Pay attention to the extension of the 
 Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
+summary(data)
+#Issue with pain, range too wide
+#Issue with mindfulness, range too wide
+#Issue with IQ, people with an IQ of 52 need special tests that are compatible with their intelligence
+
+levels(factor(data$sex))
+#Female + woman category
 
 ```
 
@@ -77,7 +96,33 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+data <- data |> 
+  mutate(
+    sex = if_else(sex == "woman", "female", sex)
+  )
 
+
+numeric_vars <- sapply(data, is.numeric)
+numeric_cols <- names(numeric_vars)[numeric_vars]
+
+variable_ranges <- list(
+  age = c(18, 99),
+  pain = c(0, 10),
+  mindfulness = c(1, 6),
+  IQ = c(70, 170),
+  STAI_trait = c(20, 80),
+  pain_cat = c(0, 52)
+)
+
+for (variable in numeric_cols) {
+  if (is.numeric(data[[variable]])) {
+    current_range <- variable_ranges[[variable]]
+    condition <- data[[variable]] < current_range[1] | data[[variable]] > current_range[2]
+    if (any(condition)) {
+      data <- data[!condition, ]
+    }
+  }
+}
 ```
 
 ### Model diagnostics
@@ -86,7 +131,9 @@ If you find values in the dataset during the EDA, that are not correct based on 
 In order to test the more complex model for outliers and to test the assumptions first build the model.
 
 ```{r}
+model_complex <- lm(pain ~ age + sex + mindfulness + STAI_trait + pain_cat + cortisol_serum + cortisol_saliva, data = data) 
 
+glance(model_complex)
 ```
 
 #### Checking for influential outliers
@@ -94,7 +141,23 @@ In order to test the more complex model for outliers and to test the assumptions
 Check for outlier values in the model.
 
 ```{r}
+for (variable in numeric_cols) {
+  Q1 <- quantile(data[[variable]], 0.25)
+  Q3 <- quantile(data[[variable]], 0.75)
+  IQR <- Q3 - Q1
+  
+  
+  lower_bound <- Q1 - 1.5 * IQR
+  upper_bound <- Q3 + 1.5 * IQR
+  
+  
+  outliers <- data[[variable]] < lower_bound | data[[variable]] > upper_bound
+  data <- data[!outliers, ]
+}
 
+view(outliers)
+
+#No outliers
 ```
 
 #### Checking assumptions
@@ -102,19 +165,48 @@ Check for outlier values in the model.
 Check the normality assumption.
 
 ```{r}
+normality_results <- data.frame(Variable = character(), p_value = numeric(), stringsAsFactors = FALSE)
 
+for (variable in numeric_cols) {
+  shapiro_test_result <- shapiro.test(data[[variable]])
+  normality_results <- rbind(normality_results, data.frame(Variable = variable, p_value = shapiro_test_result$p.value))
+}
+
+normality_results <- normality_results %>%
+  mutate(p_value = round(as.numeric(p_value), 3))
+
+print(normality_results)
+
+#Pain is not normally distributed
+
+hist(data$pain)
+
+data |> 
+  mutate(
+    pain = sqrt(pain) 
+  )
+
+print(normality_results)
+
+#Tried with boxcox, ln, and sqrt, the pain variable cannot be normally distributed
 ```
 
 Check the linearity assumption.
 
 ```{r}
+plot(model_complex, which = 1)
 
+raintest(model_complex)
+
+#Assumption met
 ```
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
+bptest(model_complex)
 
+#Assumption met
 ```
 
 Check the multicollinearity assumption.
@@ -126,7 +218,13 @@ https://statisticalhorizons.com/multicollinearity
 http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity-in-regression-analysis
 
 ```{r}
+vif(model_complex)
 
+#Assumption not met for cortisol_serum and cortisol_saliva
+
+cor(data$cortisol_serum, data$cortisol_saliva)
+
+#Conclusion: only one cortisol measure is enough, based on the coefficients, I choose cortisol_saliva
 ```
 
 ### Making decision based on model diagnostics
@@ -134,13 +232,22 @@ http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity
 If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
 
 ```{r}
+model_updated <- lm(pain ~ age + sex + mindfulness + STAI_trait + pain_cat + cortisol_saliva, data = data) 
 
+glance(model_updated)
 ```
 
 #### Checking outliers of the updated model
 
 ```{r}
+cooksd <- cooks.distance(model_updated)
 
+influential_obs <- which(cooksd > 4/nobs(model_updated))
+
+data_wo_outliers <- data |> 
+  filter(!(row_number() %in% influential_obs))
+
+model_updated <- lm(pain ~ age + sex + mindfulness + STAI_trait + pain_cat + cortisol_saliva, data = data_wo_outliers) 
 ```
 
 #### Checking assumptions of the updated model
@@ -148,25 +255,30 @@ If based on the assumption tests you decide to drop a predictor variable you sho
 Normality assumption
 
 ```{r}
+shapiro.test(rstandard(model_updated))
 
+ggplot() +
+  geom_qq(aes(sample = rstandard(model_updated))) +
+  geom_abline(color = "red") +
+  coord_fixed()
 ```
 
 Linearity assumption
 
 ```{r}
-
+raintest(model_complex)
 ```
 
 Homoscedasticty assumption (homogeneity of variance)
 
 ```{r}
-
+bptest(model_complex)
 ```
 
 Multicollinearity assumption
 
 ```{r}
-
+vif(model_updated)
 ```
 
 ## Model comparison
@@ -174,18 +286,39 @@ Multicollinearity assumption
 Create the simple model and get the results of the model that needs to be reported based on the What to report section.
 
 ```{r}
-
+model_simple <- lm(pain ~ sex + age, data = data_wo_outliers)
 ```
 
 Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
 
 ```{r}
-
+model_updated <- lm(pain ~ age + sex + mindfulness + STAI_trait + pain_cat + cortisol_saliva, data = data_wo_outliers) 
 ```
 
 Compare the two models.
 
 ```{r}
+AIC(model_simple, model_updated)
+BIC(model_simple, model_updated)
+summary_simple <- summary(model_simple)
+summary_complex <- summary(model_updated)
+f_statistic_simple <- summary_simple$fstatistic[1]
+f_statistic_complex <- summary_complex$fstatistic[1]
 
+lrt_test <- lrtest(model_simple, model_updated)
+p_value <- lrt_test$Pr[2]
+
+table_data <- data.frame(
+  Metric = c("AIC", "BIC", "F-Statistic", "LRT"),
+  Model_Simple = c(AIC(model_simple), BIC(model_simple), f_statistic_simple, "--"),
+  Model_Updated = c(AIC(model_updated), BIC(model_updated), f_statistic_complex, p_value)
+)
+
+kable(table_data, caption = "Model Comparison", align = "c")
+
+
+
+#The updated model is better than the simple one based on the adj. R2, F-statistic, AIC, and BIC values, however there was no correction for the multiple variables in the more complex model.
+#When the pain catastrophising and the cortisol measures were put in the model, the significance of age and gender disappeared, meaning that these variables are better predictors of feeling pain.
 ```
 
