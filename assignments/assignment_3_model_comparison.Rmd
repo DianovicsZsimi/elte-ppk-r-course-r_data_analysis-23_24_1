@@ -63,6 +63,7 @@ library(lmtest)
 library(broom)
 library(car)
 library(MASS)
+library(knitr)
 ```
 
 
@@ -101,6 +102,7 @@ data <- data |>
     sex = if_else(sex == "woman", "female", sex)
   )
 
+#Removed woman column
 
 numeric_vars <- sapply(data, is.numeric)
 numeric_cols <- names(numeric_vars)[numeric_vars]
@@ -123,6 +125,8 @@ for (variable in numeric_cols) {
     }
   }
 }
+
+#Made an arbitrary choice that peopl under an IQ of 70 are excluded, furthermore, removed the mindfulness and pain bad data values
 ```
 
 ### Model diagnostics
@@ -157,7 +161,8 @@ for (variable in numeric_cols) {
 
 view(outliers)
 
-#No outliers
+#No outliers based on the IQR method
+
 ```
 
 #### Checking assumptions
